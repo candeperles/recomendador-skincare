@@ -41,11 +41,14 @@ docs/               notas y otras ideas (ej. idea_dupes_labiales.md)
   (claro / light / medio / tan / oscuro) porque porcelain, olive, dark y ebony son muy chicos;
   desempate al azar cuando la última fecha tiene varias reseñas (35% de los casos)
 
-### Paso 1 · Definir el problema (semana 1)
-- [ ] Positivo = reseñó el producto **y** le gustó (rating ≥4). Negativos: muestreados
-- [ ] Split temporal: la última reseña de cada persona va a test (leave-last-out, con desempate)
-- [ ] Split cold start: personas nunca vistas, solo con su perfil de piel
-- [ ] Métricas: Recall@10, NDCG@10, total y **por tono de piel**; cobertura de catálogo
+### Paso 1 · Definir el problema (semana 1) ✅
+- [x] Positivo = rating ≥4
+- [x] Split con historial por días: test = 1 producto del último día, val = 1 del anteúltimo, train = el resto
+  (personas con positivos en ≥3 días: 41.509). Los otros productos de esos días se descartan (3,1%)
+- [x] Split cold start: 10% de las personas fuera de train, mitad val y mitad test (~21.500 cada uno)
+- [x] 7 chequeos automáticos (sin fugas, orden temporal, reproducible). Todo en `src/splits.py`
+  y `notebooks/01_splits.ipynb`; se guarda en `data/processed/`
+- [ ] Métricas: Recall@10, NDCG@10, total y **por grupo de tono**; cobertura de catálogo (→ paso 2)
 
 ### Paso 2 · Baselines (semana 1)
 - [ ] Popularidad global

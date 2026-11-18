@@ -19,11 +19,44 @@ REVIEW_COLS = [
 ]
 
 # Orden de los tonos de piel de más claro a más oscuro (para gráficos y análisis por tono).
-# "notSureST" y los valores raros se tratan aparte.
+# "notSureST" se trata como desconocido.
 SKIN_TONE_ORDER = [
     "porcelain", "fair", "fairLight", "light", "lightMedium", "medium",
     "mediumTan", "olive", "tan", "deep", "rich", "dark", "ebony",
 ]
+
+
+# Grupos de tono para el análisis de fairness (decisión del notebook 00):
+# los tonos con muy pocas personas se agrupan con sus vecinos para poder medir con precisión.
+TONE_GROUPS = {
+    "porcelain": "claro", "fair": "claro", "fairLight": "claro",
+    "light": "light",
+    "lightMedium": "medio", "medium": "medio", "mediumTan": "medio", "olive": "medio",
+    "tan": "tan",
+    "deep": "oscuro", "rich": "oscuro", "dark": "oscuro", "ebony": "oscuro",
+}
+TONE_GROUP_ORDER = ["claro", "light", "medio", "tan", "oscuro"]
+PROFILE_COLS = ["skin_tone", "skin_type", "eye_color", "hair_color"]
+
+
+def _mode_per_user(reviews: pd.DataFrame, col: str) -> pd.Series:
+    """Valor más frecuente de `col` para cada persona (vectorizado: contar, ordenar, quedarse con el primero)."""
+    c = reviews.dropna(subset=[col]).groupby(["author_id", col], observed=True).size().rename("n").reset_index()
+    c = c.sort_values(["author_id", "n"], ascending=[True, False]).drop_duplicates("author_id")
+    return c.set_index("author_id")[col].astype(str)
+
+
+def user_profiles(reviews: pd.DataFrame) -> pd.DataFrame:
+    """Una fila por persona con su perfil (valor más frecuente de cada campo) y su grupo de tono.
+
+    Los datos faltantes quedan como "desconocido": el modelo los usa como una categoría más,
+    pero esas personas quedan afuera del análisis por tono.
+    """
+    users = reviews.groupby("author_id").size().rename("n_reseñas").to_frame()
+    for c in PROFILE_COLS:
+        users[c] = _mode_per_user(reviews, c)
+    users["tone_group"] = users["skin_tone"].map(TONE_GROUPS)
+    return users.fillna("desconocido")
 
 
 def load_products() -> pd.DataFrame:
