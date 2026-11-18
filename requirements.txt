@@ -1,0 +1,13 @@
+pandas
+numpy
+pyarrow
+scikit-learn
+matplotlib
+plotly
+jupyter
+torch
+gensim
+implicit
+lightfm
+umap-learn
+streamlit
