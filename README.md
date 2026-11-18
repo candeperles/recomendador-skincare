@@ -48,13 +48,17 @@ docs/               notas y otras ideas (ej. idea_dupes_labiales.md)
 - [x] Split cold start: 10% de las personas fuera de train, mitad val y mitad test (~21.500 cada uno)
 - [x] 7 chequeos automáticos (sin fugas, orden temporal, reproducible). Todo en `src/splits.py`
   y `notebooks/01_splits.ipynb`; se guarda en `data/processed/`
-- [ ] Métricas: Recall@10, NDCG@10, total y **por grupo de tono**; cobertura de catálogo (→ paso 2)
 
-### Paso 2 · Baselines (semana 1)
-- [ ] Popularidad global
-- [ ] Popularidad por tipo × tono de piel
-- [ ] Factorización de matrices (`implicit`)
-- [ ] LightFM híbrido (con features)
+### Paso 2 · Baselines (semana 1) ✅
+- [x] Evaluación común en `src/evaluate.py`: Recall@10, NDCG@10, cobertura, desglose por grupo de tono
+- [x] Popularidad global · popularidad por segmento · ALS (`implicit`) · híbrido perfil → ALS
+  (reemplaza a LightFM, que no se instala en Windows). Código en `src/baselines.py`
+- [x] Resultados en validación (`notebooks/02_baselines.ipynb`, `reports/02_baselines_val*.csv`):
+  - Con historial: **ALS 16,9%** de recall@10 (popularidad: 4,7%)
+  - Cold start, perfil completo: **pop. por segmento 9,2% ≈ híbrido 9,3%** (popularidad: 7,8%)
+  - Sin brecha en contra de los tonos oscuros en los baselines
+- Hallazgo: los perfiles incompletos son de reseñas viejas (2011–2016) y más fáciles de adivinar.
+  La comparación principal en cold start se hace sobre personas con perfil completo
 
 ### Paso 3 · Two-tower (semana 2)
 - [ ] Torre persona: embeddings de tono, tipo de piel, ojos, pelo + promedio de los productos del historial

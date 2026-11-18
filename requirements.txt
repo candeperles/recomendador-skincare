@@ -5,9 +5,10 @@ scikit-learn
 matplotlib
 plotly
 jupyter
+ipykernel
+scipy
 torch
 gensim
 implicit
-lightfm
 umap-learn
 streamlit
