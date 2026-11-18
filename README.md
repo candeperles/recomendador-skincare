@@ -34,13 +34,16 @@ docs/               notas y otras ideas (ej. idea_dupes_labiales.md)
 
 ## Plan
 
-### Paso 0 · ¿Los datos aguantan el proyecto? (semana 1)
-- [ ] `00_revision_datos.ipynb`: reseñas por persona y por producto, faltantes, tonos, ratings, fechas
-- [ ] Decidir el umbral de actividad para el set "con historial" (¿≥3 reseñas?)
+### Paso 0 · ¿Los datos aguantan el proyecto? (semana 1) ✅
+- [x] `00_revision_datos.ipynb`: reseñas por persona y por producto, faltantes, tonos, ratings, fechas
+- [x] Umbral del set "con historial": ≥3 positivos (83 mil personas)
+- Decisiones completas al final del notebook 00. Resumen: positivo = rating ≥4; 5 grupos de tono
+  (claro / light / medio / tan / oscuro) porque porcelain, olive, dark y ebony son muy chicos;
+  desempate al azar cuando la última fecha tiene varias reseñas (35% de los casos)
 
 ### Paso 1 · Definir el problema (semana 1)
-- [ ] Positivo = reseñó el producto **y** le gustó (rating ≥4 o `is_recommended`). Negativos: muestreados
-- [ ] Split temporal: la última reseña de cada persona va a test (leave-last-out)
+- [ ] Positivo = reseñó el producto **y** le gustó (rating ≥4). Negativos: muestreados
+- [ ] Split temporal: la última reseña de cada persona va a test (leave-last-out, con desempate)
 - [ ] Split cold start: personas nunca vistas, solo con su perfil de piel
 - [ ] Métricas: Recall@10, NDCG@10, total y **por tono de piel**; cobertura de catálogo
 
