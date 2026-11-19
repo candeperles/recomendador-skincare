@@ -1,0 +1,7 @@
+configuración,mejor época,recall warm,recall cold (perfil completo),cobertura cold
+"A · base (temp 0,05, hist. dropout 0,3)",9,0.1792,0.1018,0.0276
+"B · temperatura 0,1",8,0.1778,0.1032,0.0332
+"C · hist. dropout 0,5",10,0.1754,0.1014,0.0306
+D · sin hist. dropout,10,0.1805,0.1029,0.017
+"E · red más grande (dim 128, hidden 512)",8,0.1857,0.1027,0.0311
+"F · temperatura 0,02",8,0.1759,0.1016,0.0251

@@ -8,7 +8,6 @@ jupyter
 ipykernel
 scipy
 torch
-gensim
 implicit
 umap-learn
 streamlit

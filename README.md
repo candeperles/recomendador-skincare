@@ -60,15 +60,23 @@ docs/               notas y otras ideas (ej. idea_dupes_labiales.md)
 - Hallazgo: los perfiles incompletos son de reseñas viejas (2011–2016) y más fáciles de adivinar.
   La comparación principal en cold start se hace sobre personas con perfil completo
 
-### Paso 3 · Two-tower (semana 2)
-- [ ] Torre persona: embeddings de tono, tipo de piel, ojos, pelo + promedio de los productos del historial
-- [ ] Torre producto: embeddings de ID, marca, categoría + log(precio) + ingredientes (Ingredient2Vec)
-- [ ] Pérdida softmax con negativos dentro del batch
+### Paso 3 · Two-tower (semana 2) ✅
+- [x] Torre persona: embeddings de tono, tipo de piel, ojos, pelo + promedio de los vectores de los productos del historial
+- [x] Torre producto: embeddings de ID, marca, categorías + log(precio) + ingredientes y highlights
+  (aprendidos dentro de la red, en lugar de un Ingredient2Vec aparte)
+- [x] Pérdida softmax sobre **todo** el catálogo (con 2.351 productos no hace falta muestrear negativos)
+- [x] Código en `src/two_tower.py`, grilla en `scripts/grid_two_tower.py`, análisis en `notebooks/03_two_tower.ipynb`
+- Resultados en validación (`reports/03_two_tower_val.csv`):
+  - Con historial: **18,5%** de recall@10 (ALS: 16,9%; +1,6 ± 0,3 puntos)
+  - Cold start, perfil completo: **10,3%** (híbrido: 9,3%; +1,0 ± 0,3 puntos)
+  - Sin brecha en contra de los tonos oscuros: el grupo *oscuro* es el que más mejora
+  - Punto débil: en cold start recomienda pocos productos distintos (67), casi todos populares
 
 ### Paso 4 · Experimentos (semana 3)
-- [ ] Ablaciones: sin perfil, sin ingredientes, sin historial
-- [ ] Fairness: recall por tono de piel, ¿el perfil achica la brecha?
-- [ ] Sesgo de popularidad
+- [ ] Ablaciones: sin perfil, sin ingredientes/highlights, sin historial, sin ID
+- [ ] Fairness: recall por tono de piel; ¿por qué *dark* recibe una lista tan distinta y *tan* no mejora?
+- [ ] Sesgo de popularidad: penalizar lo popular en cold start, ¿cuánto recall cuesta?
+- [ ] Evaluación final en test (una sola vez)
 - [ ] Demo: elegís tu piel y te devuelve el top 10
 
 ### Paso 5 · Contarlo (semana 3)
