@@ -6,6 +6,8 @@ aunque nunca hayas reseñado nada? ¿Y funciona igual de bien para todos los ton
 Una red neuronal **two-tower** (persona ↔ producto) en PyTorch, entrenada con ~1 millón de reseñas de Sephora,
 comparada contra baselines clásicos bien ajustados y con un análisis de *fairness* por tono de piel.
 
+📖 **La historia, con gráficos interactivos:** [¿Tu piel alcanza?](https://candeperles.github.io/recomendador-skincare/) (`docs/index.html`)
+
 ## Resultados en 30 segundos
 
 Evaluación final en **test** (datos que ninguna decisión vio), recall@10:
@@ -34,6 +36,10 @@ Elegís tu tono, tipo de piel, ojos y pelo (y, si querés, productos que ya te g
 ```
 .venv\Scripts\streamlit run web/app.py
 ```
+
+La demo solo necesita `web/assets/` (catálogo, categorías de perfil y pesos del modelo, ~2,5 MB, generados con
+`scripts/export_demo.py`), así que corre sin los datos de reseñas. Para publicarla en Streamlit Community Cloud:
+archivo principal `web/app.py` (usa `web/requirements.txt`, con PyTorch para CPU).
 
 ![Demo](reports/figures/05_demo.jpg)
 

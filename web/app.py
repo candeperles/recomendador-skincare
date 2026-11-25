@@ -3,23 +3,29 @@
 Correr desde la raíz del proyecto:
     .venv\\Scripts\\streamlit run web/app.py
 
-Usa el modelo final (models/two_tower_final.pt, ver scripts/train_final.py) y los datos procesados.
-El tema (negro + rosa) está en .streamlit/config.toml y en el CSS de abajo.
+Solo necesita web/assets/ (catálogo, categorías de perfil y pesos del modelo final), que genera
+scripts/export_demo.py. No usa los datos de reseñas, así que corre también en la nube.
+El tema (rosa empolvado + marrones) está en .streamlit/config.toml y en el CSS de abajo.
+
+Datos: "Sephora Products and Skincare Reviews" (Nady Inky, Kaggle), licencia CC BY 4.0.
 """
 import html
+import json
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+ASSETS = Path(__file__).resolve().parent / "assets"
 sys.path.insert(0, str(ROOT))
 
-import numpy as np
 import pandas as pd
 import streamlit as st
+import numpy as np
+import torch
 
-from src.evaluate import ItemIndex
-from src.splits import load_splits
-from src.two_tower import TwoTowerRecommender, _parse_list
+from src.two_tower import DemoRecommender, _parse_list
+
+torch.set_num_threads(2)
 
 st.set_page_config(page_title="Tu top 10 de skincare", page_icon="🧴", layout="wide")
 
@@ -134,6 +140,8 @@ section[data-testid="stSidebar"] [role="group"] svg {{ fill: {ROSA} !important; 
 .pie h3 {{ font-family: 'Anton', sans-serif; font-weight: 400; text-transform: uppercase; color: {ROSA}; font-size: 2rem; margin: 2.4rem 0 .6rem 0; }}
 .pie-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }}
 .pie-grid div {{ border: 1.5px solid #3A2C26; border-radius: 22px; padding: 1rem 1.2rem; font-size: .86rem; color: #DCCFC7; }}
+.pie p.creditos {{ font-size: .75rem !important; color: #A8958B; margin-top: 1.6rem; line-height: 1.5; }}
+.creditos a {{ color: {CARAMELO}; }}
 .pie-grid b {{ display: block; font-family: 'Anton', sans-serif; font-weight: 400; color: {CREMA}; font-size: 1.6rem; }}
 </style>
 """, unsafe_allow_html=True)
@@ -141,13 +149,9 @@ section[data-testid="stSidebar"] [role="group"] svg {{ fill: {ROSA} !important; 
 
 @st.cache_resource(show_spinner="Cargando la red y el catálogo (unos segundos)...")
 def cargar():
-    s = load_splits()
-    idx = ItemIndex(s.items)
-    todo = pd.concat([s.train, s.val_warm, s.val_cold], ignore_index=True)
-    tt = TwoTowerRecommender(todo, s.users, s.items, idx, weights=ROOT / "models" / "two_tower_final.pt",
-                             dim=128, hidden=512, threads=4)
-    items = s.items.reset_index(drop=True).copy()
-    items["positivos"] = np.bincount(idx.to_pos(todo.product_id), minlength=len(idx))
+    items = pd.read_parquet(ASSETS / "items.parquet")
+    cats = json.loads((ASSETS / "perfil_categorias.json").read_text(encoding="utf-8"))
+    tt = DemoRecommender(items, cats, ASSETS / "two_tower_final.pt", dim=128, hidden=512)
     items["etiqueta"] = items.product_name + " · " + items.brand_name
     items["highlights_l"] = items.highlights.map(_parse_list)
     items["ranking_pop"] = items.positivos.rank(ascending=False, method="min").astype(int)
@@ -271,5 +275,9 @@ mostrar("""
   <div><b>Variedad</b>Resta puntos a los productos más reseñados. "Un poco" casi no cuesta acierto; "mucha" cuesta
   bastante.</div>
 </div>
+<p class="creditos">Datos: <a href="https://www.kaggle.com/datasets/nadyinky/sephora-products-and-skincare-reviews">Sephora
+Products and Skincare Reviews</a> (Nady Inky, Kaggle), licencia CC BY 4.0 ·
+<a href="https://github.com/candeperles/recomendador-skincare">código y análisis</a>. Proyecto académico,
+sin relación con Sephora.</p>
 </div>
 """)

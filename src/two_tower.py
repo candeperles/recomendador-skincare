@@ -322,13 +322,41 @@ class TwoTowerRecommender:
         histories: opcional, una lista (una por persona) de posiciones de productos que le gustaron.
                    Sin historial es cold start puro. La red no se re-entrena: el historial es una entrada.
         """
+        return _score_profiles(self.model, self.fi, self.ud.encode_profiles(profiles), histories)
+
+
+@torch.no_grad()
+def _score_profiles(model, fi, prof_codes, histories=None):
+    """Puntaje (coseno) de cada producto para perfiles ya codificados, con historial opcional."""
+    model.eval()
+    V = model.item_vectors(fi)
+    B = len(prof_codes)
+    histories = histories if histories is not None else [[] for _ in range(B)]
+    lens = np.array([len(h) for h in histories])
+    flat = np.concatenate([np.asarray(h, dtype=np.int64) for h in histories]) if lens.sum() else np.array([], dtype=np.int64)
+    hist_sum = _history_sum(V, flat, lens)
+    u = model.user_vectors(torch.as_tensor(prof_codes), hist_sum, torch.as_tensor(lens))
+    return (u @ V.T).numpy()
+
+
+class DemoRecommender:
+    """Versión liviana para la demo: no necesita los datos de reseñas, solo
+    (1) el catálogo de productos, (2) las categorías de perfil con las que se entrenó y (3) los pesos.
+    Los genera scripts/export_demo.py en web/assets/.
+    """
+
+    def __init__(self, items: pd.DataFrame, categories: dict, weights, **model_kw):
+        self.fi = ItemFeatures.build(items)
+        self.cols = list(categories)
+        self.categories = [pd.Index(v) for v in categories.values()]
+        sizes = [len(c) + 1 for c in self.categories]
+        self.model = TwoTower(len(items), self.fi.sizes, sizes, **model_kw)
+        self.model.load_state_dict(torch.load(weights))
         self.model.eval()
-        V = self.item_vectors()
-        prof = torch.as_tensor(self.ud.encode_profiles(profiles))
-        B = len(profiles)
-        histories = histories if histories is not None else [[] for _ in range(B)]
-        lens = np.array([len(h) for h in histories])
-        flat = np.concatenate([np.asarray(h, dtype=np.int64) for h in histories]) if lens.sum() else np.array([], dtype=np.int64)
-        hist_sum = _history_sum(V, flat, lens)
-        u = self.model.user_vectors(prof, hist_sum, torch.as_tensor(lens))
-        return (u @ V.T).numpy()
+
+    def encode_profiles(self, profiles: pd.DataFrame):
+        return np.stack([cats.get_indexer(profiles[c].astype(str)) + 1
+                         for c, cats in zip(self.cols, self.categories)], axis=1).astype(np.int64)
+
+    def score_profiles(self, profiles: pd.DataFrame, histories=None):
+        return _score_profiles(self.model, self.fi, self.encode_profiles(profiles), histories)

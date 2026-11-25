@@ -1,0 +1,8 @@
+# Dependencias solo de la demo (Streamlit Community Cloud usa este archivo porque está junto a app.py).
+# PyTorch en versión CPU: la versión normal en Linux baja ~2 GB de librerías de GPU que la demo no usa.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.15.0+cpu
+streamlit==1.67.0
+pandas
+numpy
+pyarrow

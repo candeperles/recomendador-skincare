@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>¿Tu piel alcanza?</title>
+<meta name="description" content="Un recomendador de skincare con una red neuronal two-tower, entrenado con un millón de reseñas de Sephora, y lo que encontré sobre tonos de piel.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --fondo: #FBF6F1;
+  --papel: #F4E6DF;
+  --rosa: #EACBC0;
+  --espresso: #2B1E19;
+  --tinta: #2B1E19;
+  --tinta-2: #5E4B43;
+  --tinta-3: #8C776D;
+  --linea: #E4D5CD;
+  --red: #A9485F;        /* la two-tower: siempre este color */
+  --base: #A87A2E;       /* los baselines */
+  --contexto: #DDC3BC;   /* barras de contexto (no destacadas) */
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fondo); color: var(--tinta); font: 17px/1.65 'Inter', sans-serif; }
+a { color: var(--red); }
+.wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+.ancho { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+
+/* portada */
+.portada { background: var(--espresso); color: #F7EFE9; padding: 28px 0 64px; overflow: hidden; }
+.meta { display: flex; gap: 32px; flex-wrap: wrap; font-size: 11px; text-transform: uppercase; letter-spacing: .9px; color: #A8958B; margin-bottom: 48px; }
+.meta b { display: block; color: #F7EFE9; font-size: 13px; letter-spacing: .4px; }
+h1 { font-family: 'Anton', sans-serif; font-weight: 400; text-transform: uppercase; color: var(--rosa);
+     font-size: clamp(56px, 13vw, 132px); line-height: .88; margin: 0; letter-spacing: 1px; }
+.pills { display: flex; gap: 10px; flex-wrap: wrap; margin: 28px 0 26px; }
+.pill { display: inline-block; padding: 7px 16px; border-radius: 999px; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .7px; }
+.pill.a { background: #F7EFE9; color: var(--espresso); transform: rotate(-5deg); }
+.pill.b { background: var(--rosa); color: var(--espresso); transform: rotate(4deg); }
+.pill.c { border: 1.5px solid #C4977F; color: #C4977F; transform: rotate(-2deg); }
+.bajada { font-size: 20px; line-height: 1.5; color: #E5D8D0; max-width: 640px; margin: 0; }
+
+/* texto */
+h2 { font-family: 'Anton', sans-serif; font-weight: 400; text-transform: uppercase; font-size: clamp(34px, 6vw, 52px);
+     line-height: .95; margin: 72px 0 18px; color: var(--espresso); }
+h2 .n { color: var(--red); }
+p { margin: 0 0 18px; }
+.nota { font-size: 14px; color: var(--tinta-3); }
+strong { font-weight: 700; }
+
+/* tarjetas de números */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 26px 0 8px; }
+.stat { background: var(--papel); border-radius: 24px; padding: 18px 20px; }
+.stat b { display: block; font-family: 'Anton', sans-serif; font-weight: 400; font-size: 46px; line-height: 1; color: var(--red); }
+.stat span { font-size: 14px; color: var(--tinta-2); }
+
+/* gráficos */
+figure { margin: 26px 0 30px; background: #fff; border-radius: 26px; padding: 20px 20px 12px; border: 1px solid var(--linea); position: relative; }
+figcaption .t { font-weight: 700; font-size: 16px; }
+figcaption .s { font-size: 13.5px; color: var(--tinta-3); margin-top: 2px; }
+.leyenda { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--tinta-2); margin: 10px 0 2px; }
+.leyenda i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { font-family: 'Inter', sans-serif; fill: var(--tinta-2); font-size: 12px; }
+svg .eje { stroke: var(--linea); }
+svg .cero { stroke: var(--tinta-3); }
+svg .valor { fill: var(--tinta); font-weight: 600; }
+svg rect.mark, svg circle.mark { cursor: default; }
+svg .hit { fill: transparent; }
+.tip { position: absolute; pointer-events: none; background: var(--espresso); color: #F7EFE9; font-size: 12.5px; padding: 7px 10px;
+       border-radius: 10px; opacity: 0; transition: opacity .1s; white-space: nowrap; z-index: 5; }
+.tip b { color: var(--rosa); }
+details { margin-top: 8px; font-size: 13px; color: var(--tinta-2); }
+summary { cursor: pointer; color: var(--tinta-3); }
+table { border-collapse: collapse; margin: 8px 0 4px; font-size: 13px; }
+td, th { padding: 3px 12px 3px 0; text-align: left; border-bottom: 1px solid var(--linea); }
+td.num, th.num { text-align: right; }
+.botones { display: flex; gap: 8px; margin: 12px 0 4px; flex-wrap: wrap; }
+.botones button { font: 600 12px 'Inter', sans-serif; text-transform: uppercase; letter-spacing: .6px; padding: 8px 14px;
+                  border-radius: 999px; border: 1.5px solid var(--espresso); background: transparent; color: var(--espresso); cursor: pointer; }
+.botones button[aria-pressed="true"] { background: var(--espresso); color: #F7EFE9; }
+.mapa img { width: 100%; border-radius: 16px; display: block; }
+
+/* lecciones y pie */
+.lecciones { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 22px; }
+.lecciones div { background: var(--espresso); color: #E5D8D0; border-radius: 24px; padding: 20px 22px; font-size: 15px; }
+.lecciones b { display: block; font-family: 'Anton', sans-serif; font-weight: 400; font-size: 24px; color: var(--rosa); text-transform: uppercase; line-height: 1.05; margin-bottom: 8px; }
+.cta { display: flex; gap: 12px; flex-wrap: wrap; margin: 30px 0 10px; }
+.cta a { display: inline-block; padding: 12px 22px; border-radius: 999px; font-weight: 700; text-decoration: none; font-size: 14px; text-transform: uppercase; letter-spacing: .6px; }
+.cta a.uno { background: var(--red); color: #fff; }
+.cta a.dos { border: 1.5px solid var(--espresso); color: var(--espresso); }
+footer { margin-top: 80px; padding: 28px 0 40px; border-top: 1px solid var(--linea); font-size: 13px; color: var(--tinta-3); }
+@media (max-width: 560px) { body { font-size: 16px; } figure { padding: 16px 12px 10px; border-radius: 20px; } }
+</style>
+</head>
+<body>
+
+<header class="portada">
+  <div class="ancho">
+    <div class="meta">
+      <div>Datos<b>1,09 M reseñas de Sephora</b></div>
+      <div>Modelo<b>Red two-tower · PyTorch</b></div>
+      <div>Pregunta<b>¿Y para todos los tonos?</b></div>
+    </div>
+    <h1>¿Tu piel<br>alcanza?</h1>
+    <div class="pills"><span class="pill a">Skincare</span><span class="pill b">Redes neuronales</span><span class="pill c">Fairness</span></div>
+    <p class="bajada">Si me decís tu tipo y tu tono de piel, ¿te puedo recomendar skincare que te vaya a gustar, aunque nunca hayas reseñado nada? Entrené una red neuronal con un millón de reseñas para averiguarlo. Y en el camino, los datos me mostraron algo que no esperaba.</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+<h2><span class="n">01</span> Casi todos son nuevos</h2>
+<p>Los recomendadores clásicos aprenden de tu historial: lo que compraste, lo que reseñaste. Pero en skincare, la mayoría de la gente aparece <strong>una sola vez</strong>.</p>
+<div class="stats">
+  <div class="stat"><b>58%</b><span>de las personas escribió una sola reseña</span></div>
+  <div class="stat"><b>503 mil</b><span>personas, con su tono, tipo de piel, ojos y pelo</span></div>
+  <div class="stat"><b>2.351</b><span>productos de skincare reseñados</span></div>
+</div>
+<p>Para esas personas no hay historial del cual aprender. Lo único que sabemos es su piel. Ese es el problema del <em>cold start</em>, y es el centro de este proyecto.</p>
+<p>Y hay un segundo problema: <strong>los tonos de piel no están representados por igual.</strong></p>
+
+<figure id="f-tonos">
+  <figcaption><div class="t">Personas por tono de piel</div><div class="s">Personas con al menos una reseña positiva, por el tono que declararon. Ordenado de más claro a más oscuro.</div></figcaption>
+  <div class="chart"></div><div class="tip"></div>
+</figure>
+<p>Los tonos claros y medios son más de 300 mil personas. <em>Deep</em>, <em>rich</em>, <em>dark</em> y <em>ebony</em>, juntos, apenas 10 mil. Un modelo entrenado con estos datos podría aprender muy bien lo que les gusta a las mayorías y mal lo que les gusta a los demás. Por eso, todo el proyecto mide los resultados <strong>por tono de piel</strong>, agrupados en cinco grupos: claro, light, medio, tan y oscuro.</p>
+
+<h2><span class="n">02</span> Dos torres</h2>
+<p>El modelo es una <strong>red neuronal <em>two-tower</em></strong>, la misma familia de modelos que usan YouTube o Google Play. Una torre convierte a la persona (su tono, tipo de piel, ojos, pelo y, si tiene, lo que le gustó antes) en una lista de 128 números. La otra torre hace lo mismo con cada producto, a partir de su marca, categoría, precio, ingredientes y etiquetas como <em>"Best for Oily Skin"</em>. La red te recomienda los productos cuya lista de números se parece más a la tuya.</p>
+<p>Pero una red neuronal no vale nada si no le gana a algo más simple. Antes de entrenarla ajusté con cuidado cuatro modelos de referencia: recomendar lo más popular, lo más popular <em>entre personas con tu misma piel</em>, una factorización de matrices clásica (ALS) y un híbrido que predice tus gustos desde tu perfil.</p>
+
+<h2><span class="n">03</span> ¿Le gana?</h2>
+<p>Lo evalué en datos que ningún modelo ni ninguna decisión había visto: escondí productos que le gustaron a cada persona y medí qué proporción quedaba en su top 10 (<em>recall@10</em>).</p>
+
+<figure id="f-test">
+  <figcaption><div class="t">Recall@10 en test, por escenario</div><div class="s">Proporción de los productos que le gustaron a cada persona que aparecen en su top 10. Persona nueva: solo con su perfil completo de piel.</div></figcaption>
+  <div class="leyenda"><span><i style="background:var(--red)"></i>Red two-tower</span><span><i style="background:var(--base)"></i>Modelos de referencia</span></div>
+  <div class="chart"></div><div class="tip"></div>
+</figure>
+<p><strong>Para una persona nueva, la red gana</strong>: acierta el 10,2% contra 8,9% del mejor modelo simple, un 15% más. Y el resultado de la red se reproduce casi exacto entre validación (10,3%) y test (10,2%). <strong>Con historial, empata</strong> con el ALS (15,2% contra 15,0%). Cuando ya sabemos qué te gustó, eso dice casi todo.</p>
+<p class="nota">Recomendar al azar daría 0,4%. Las diferencias de la red contra el mejor modelo simple son +1,3 ± 0,3 puntos (persona nueva) y +0,2 ± 0,3 (con historial, no significativa).</p>
+
+<h2><span class="n">04</span> ¿Qué aprendió?</h2>
+<p>Para entender de dónde sale la ventaja, re-entrené la red sacándole una pieza por vez y medí cuánto empeoraba. Cambiá de escenario:</p>
+
+<figure id="f-abl">
+  <figcaption><div class="t">Cuánto empeora la red sin cada pieza</div><div class="s">Diferencia de recall@10 contra la red completa, en puntos (validación).</div></figcaption>
+  <div class="botones" role="group" aria-label="Escenario">
+    <button aria-pressed="true" data-esc="nueva">Persona nueva</button>
+    <button aria-pressed="false" data-esc="historial">Con historial</button>
+  </div>
+  <div class="chart"></div><div class="tip"></div>
+</figure>
+<p>Cada pieza tiene su escenario. <strong>El perfil de piel solo importa cuando no hay historial</strong>: sin él, la red le recomienda lo mismo a todo el mundo. <strong>El historial es, por lejos, lo más importante</strong> cuando existe. Y la información de los productos (ingredientes, marca, etiquetas) es exactamente lo que le permite a la red alcanzar al ALS: sin ella, cae a su mismo 16,9% en validación.</p>
+<p>Un detalle práctico: sacarle el "ID" a cada producto casi no cambia nada. La red puede recomendar un producto <strong>recién lanzado</strong>, que nadie reseñó, solo por lo que es.</p>
+
+<h2><span class="n">05</span> ¿Y para todos los tonos?</h2>
+<p>La red no deja atrás a ningún grupo de tono: en test, para personas nuevas, mejora a los modelos simples en los cinco grupos; con historial, empata o gana en cada uno. Pero la pregunta más interesante es <strong>a quién le sirve que la red conozca su piel</strong>. Comparé la red completa con la red sin perfil, para personas nuevas:</p>
+
+<figure id="f-aporte">
+  <figcaption><div class="t">Lo que aporta el perfil de piel, por grupo de tono</div><div class="s">Recall@10 de la red completa menos el de la red sin perfil, en puntos. Personas nuevas con perfil completo (validación).</div></figcaption>
+  <div class="chart"></div><div class="tip"></div>
+</figure>
+<p>A todos les sirve, pero <strong>al grupo <em>oscuro</em> le sirve más que a nadie</strong> (+3,7 puntos). Tiene sentido: sin perfil, la red recomienda lo popular, y lo popular está dominado por lo que les gusta a las mayorías. Contarle tu tono es lo que hace que la recomendación sea para vos.</p>
+
+<h2><span class="n">06</span> El dato raro</h2>
+<p>Había algo que no cerraba. La red acertaba muchísimo con tres tonos chicos: <em>porcelain</em>, <em>olive</em> y <em>dark</em>. Su recall rondaba el 50%, contra el 15% del resto. ¿La red las entendía mejor? Miré qué reseñaban.</p>
+
+<figure id="f-conc">
+  <figcaption><div class="t">¿Qué tan concentradas están las reseñas de cada tono?</div><div class="s">Proporción de las reseñas positivas de cada tono que cae en sus 10 productos más reseñados.</div></figcaption>
+  <div class="chart"></div><div class="tip"></div>
+</figure>
+<p>Las personas de esos tres tonos reseñan <strong>casi siempre los mismos productos</strong>, y casi todos de dos marcas: Caudalie y KORRES. En los demás tonos, los 10 productos más reseñados son apenas el 8% del total. Lo más probable es que esas reseñas vengan de un origen distinto (por ejemplo, campañas de alguna marca), no del formulario general.</p>
+<p>La red aprendió ese patrón y "acierta". Pero <strong>no está personalizando para pieles oscuras: está repitiendo un artefacto de cómo se juntaron los datos.</strong> Es el hallazgo que más me importa del proyecto: una métrica alta en un grupo chico puede esconder un sesgo. Hay que mirar <em>qué</em> se recomienda, no solo cuánto se acierta.</p>
+
+<h2><span class="n">07</span> Más variedad</h2>
+<p>Otro problema: para personas nuevas, la red recomienda apenas 67 productos distintos a 16 mil personas, casi todos superventas. Probé restarle puntos a lo popular al momento de recomendar, sin re-entrenar nada:</p>
+
+<figure id="f-var">
+  <figcaption><div class="t">Acierto contra variedad</div><div class="s">Personas nuevas. Cada punto es un nivel de penalización a lo popular (β). Eje horizontal: productos distintos recomendados en total.</div></figcaption>
+  <div class="chart"></div><div class="tip"></div>
+</figure>
+<p>Hay variedad casi gratis: con una penalización chica, la red muestra <strong>40% más productos distintos sin perder acierto</strong>. Con una un poco mayor, el doble de productos, y todavía le gana al mejor modelo simple. Pasado cierto punto, se rompe: empieza a recomendar productos que casi nadie probó.</p>
+
+<h2><span class="n">08</span> El mapa</h2>
+<p>La red ubica cada producto en un espacio de 128 dimensiones. Aplastado a dos (con UMAP), así se ve el catálogo según la red:</p>
+<figure class="mapa">
+  <figcaption><div class="t">Mapa de productos según la red</div><div class="s">Cada punto es un producto; los colores son categorías y el tamaño, la cantidad de reseñas positivas.</div></figcaption>
+  <img src="img/05_mapa_productos.png" alt="Mapa UMAP de los 2.351 productos. Los colores de categoría aparecen mezclados y hay islas compactas, como una de productos de The Ordinary y otra de tamaños mini.">
+</figure>
+<p>Los colores están mezclados: la red <strong>no organizó el catálogo por tipo de producto</strong>. Lo organizó <strong>por marca</strong>. Los vecinos de un producto comparten su marca 34 veces más de lo que daría el azar. La gente arma <strong>rutinas de marca</strong>: a quien le gusta una crema de Drunk Elephant le suele gustar el limpiador de Drunk Elephant. Nadie se lo dijo a la red; lo aprendió de las reseñas.</p>
+
+<h2><span class="n">09</span> Lo que me llevo</h2>
+<div class="lecciones">
+  <div><b>Un buen baseline vale oro</b>Sin el ALS bien ajustado, habría celebrado una red que, con historial, no gana.</div>
+  <div><b>Test existe por algo</b>La ventaja con historial que vi en validación no se sostuvo en test. Y un error en mi propio protocolo apareció justo porque test daba raro.</div>
+  <div><b>Mirar qué, no solo cuánto</b>La métrica más alta del proyecto resultó ser un sesgo de los datos.</div>
+</div>
+
+<div class="cta">
+  <a class="uno" id="link-demo" href="https://github.com/candeperles/recomendador-skincare#la-demo">Probá la demo</a>
+  <a class="dos" href="https://github.com/candeperles/recomendador-skincare">Código y análisis</a>
+</div>
+
+<footer>
+  Datos: <a href="https://www.kaggle.com/datasets/nadyinky/sephora-products-and-skincare-reviews">Sephora Products and Skincare Reviews</a> (Nady Inky, Kaggle), licencia CC BY 4.0. Las métricas y el método completo están en los notebooks del repositorio. Proyecto académico, sin relación con Sephora.
+</footer>
+</main>
+
+<script>
+// ---------------------------------------------------------------- datos (de reports/ y de los notebooks)
+const DATOS = {
+  tonos: [ ["porcelain",514],["fair",72653],["fairLight",19130],["light",90384],["lightMedium",70267],["medium",24672],
+           ["mediumTan",23092],["olive",644],["tan",12172],["deep",7684],["rich",2094],["dark",263],["ebony",1] ],
+  test: [
+    { grupo: "Persona nueva", filas: [["Popularidad",7.54,"base"],["Pop. por segmento",8.83,"base"],["Híbrido perfil→ALS",8.91,"base"],["Two-tower",10.21,"red"]] },
+    { grupo: "Con historial", filas: [["Popularidad",3.54,"base"],["ALS",15.00,"base"],["Two-tower",15.18,"red"]] },
+  ],
+  ablacion: {
+    nueva:     [["Sin perfil",-2.28],["Sin historial",-0.88],["Sin contenido",-0.17],["Sin ID",0.08]],
+    historial: [["Sin perfil",0.00],["Sin historial",-12.80],["Sin contenido",-1.62],["Sin ID",-0.58]],
+  },
+  aporte: [["claro",2.19],["light",1.98],["medio",2.51],["tan",1.75],["oscuro",3.72]],
+  conc: [ ["porcelain",58],["fair",8],["fairLight",8],["light",7],["lightMedium",7],["medium",8],["mediumTan",8],
+          ["olive",63],["tan",9],["deep",9],["rich",9],["dark",49] ],
+  variedad: [[0,67,10.30],[0.25,95,10.30],[0.5,130,9.73],[0.75,225,8.20],[1,279,0.80]],
+};
+const fmt = (v, d=1) => v.toLocaleString("es-AR", { minimumFractionDigits: d, maximumFractionDigits: d });
+const NS = "http://www.w3.org/2000/svg";
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function el(tag, attrs={}, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+
+const RENDER = [];
+function tip(fig) {
+  const t = fig.querySelector(".tip");
+  return {
+    show(ev, html) { const r = fig.getBoundingClientRect(); t.innerHTML = html; t.style.opacity = 1;
+      const x = Math.min(ev.clientX - r.left + 14, r.width - t.offsetWidth - 8); t.style.left = x + "px"; t.style.top = (ev.clientY - r.top - 36) + "px"; },
+    hide() { t.style.opacity = 0; },
+  };
+}
+function tabla(fig, cabecera, filas) {
+  if (fig.querySelector("details")) return;
+  const d = document.createElement("details");
+  d.innerHTML = `<summary>Ver los datos</summary><table><tr>${cabecera.map((c,i)=>`<th class="${i?'num':''}">${c}</th>`).join("")}</tr>` +
+    filas.map(f => `<tr>${f.map((c,i)=>`<td class="${i?'num':''}">${c}</td>`).join("")}</tr>`).join("") + "</table>";
+  fig.appendChild(d);
+}
+
+// barras horizontales: filas = [{label, value, color, tip, valueLabel}]
+function barrasH(fig, filas, { max, min = 0, ancho = 680, altoFila = 30, margenIzq = 140, grupos = null, sufijo = "" } = {}) {
+  const cont = fig.querySelector(".chart"); cont.innerHTML = "";
+  const t = tip(fig);
+  const W = Math.max(300, cont.clientWidth || ancho), padR = W < 480 ? 46 : 64;
+  const x0 = Math.min(margenIzq, Math.round(W * 0.38)), x1 = W - padR;
+  let y = 6; const pos = [];
+  filas.forEach((f, i) => { if (grupos && f.grupoInicio) y += i ? 22 : 16; pos.push(y); y += altoFila; });
+  const H = y + 22;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" }, cont);
+  const sx = v => x0 + (v - min) / (max - min) * (x1 - x0);
+  const ticks = []; const paso = (max - min) > 40 ? 20000 : (max - min) > 12 ? 5 : (max - min) > 5 ? 2 : 1;
+  for (let v = Math.ceil(min / paso) * paso; v <= max + 1e-9; v += paso) ticks.push(v);
+  if (fig.id === "f-tonos") { ticks.length = 0; for (let v = 0; v <= max; v += 20000) ticks.push(v); }
+  ticks.forEach(v => { el("line", { x1: sx(v), x2: sx(v), y1: 0, y2: H - 20, class: v === 0 ? "cero" : "eje" }, svg);
+    const tx = el("text", { x: sx(v), y: H - 4, "text-anchor": "middle" }, svg); tx.textContent = fig.id === "f-tonos" ? (v ? (v / 1000) + " mil" : "0") : fmt(v, 0); });
+  filas.forEach((f, i) => {
+    const yy = pos[i];
+    if (grupos && f.grupoInicio) { const g = el("text", { x: 0, y: yy - 6, class: "valor" }, svg); g.textContent = f.grupoInicio; }
+    const lab = el("text", { x: x0 - 10, y: yy + altoFila / 2 + 4, "text-anchor": "end" }, svg); lab.textContent = f.label;
+    const a = sx(Math.min(0, f.value) < min ? min : Math.min(0, f.value)), b = sx(Math.max(0, f.value));
+    const w = Math.max(b - a, 1.5), h = altoFila - 10;
+    const r = el("rect", { x: a, y: yy + 5, width: w, height: h, rx: 4, fill: f.color, class: "mark" }, svg);
+    const v = el("text", { x: f.value >= 0 ? b + 6 : a - 6, y: yy + altoFila / 2 + 4, "text-anchor": f.value >= 0 ? "start" : "end", class: "valor" }, svg);
+    v.textContent = f.valueLabel;
+    const hit = el("rect", { x: 0, y: yy, width: W, height: altoFila, class: "hit" }, svg);
+    hit.addEventListener("mousemove", ev => { t.show(ev, f.tip); r.setAttribute("opacity", .85); });
+    hit.addEventListener("mouseleave", () => { t.hide(); r.removeAttribute("opacity"); });
+  });
+}
+
+// 1 · personas por tono
+RENDER.push(() => {
+  const fig = document.getElementById("f-tonos");
+  barrasH(fig, DATOS.tonos.map(([t, n]) => ({ label: t, value: n, color: css("--red"),
+    valueLabel: n.toLocaleString("es-AR"), tip: `<b>${t}</b> · ${n.toLocaleString("es-AR")} personas` })),
+    { max: 100000, altoFila: 24, margenIzq: 96 });
+  tabla(fig, ["Tono", "Personas"], DATOS.tonos.map(([t, n]) => [t, n.toLocaleString("es-AR")]));
+});
+
+// 2 · resultados en test
+RENDER.push(() => {
+  const fig = document.getElementById("f-test"); const filas = [];
+  DATOS.test.forEach(g => g.filas.forEach(([m, v, c], i) => filas.push({ label: m, value: v, grupoInicio: i === 0 ? g.grupo : null,
+    color: css(c === "red" ? "--red" : "--base"), valueLabel: fmt(v) + "%", tip: `<b>${g.grupo}</b> · ${m}: ${fmt(v)}%` })));
+  barrasH(fig, filas, { max: 16, grupos: true, margenIzq: 150 });
+  tabla(fig, ["Escenario · modelo", "Recall@10 (%)"], DATOS.test.flatMap(g => g.filas.map(([m, v]) => [`${g.grupo} · ${m}`, fmt(v)])));
+});
+
+// 3 · ablaciones (con botones)
+RENDER.push(() => {
+  const fig = document.getElementById("f-abl");
+  const dibujar = esc => barrasH(fig, DATOS.ablacion[esc].map(([p, d]) => ({ label: p, value: d, color: css("--red"),
+    valueLabel: (d > 0 ? "+" : d < 0 ? "−" : "") + fmt(Math.abs(d)), tip: `<b>${p}</b>: ${d > 0 ? "+" : d < 0 ? "−" : ""}${fmt(Math.abs(d), 2)} puntos` })),
+    { min: -14, max: 2, margenIzq: 120 });
+  if (!fig.dataset.listo) { fig.dataset.listo = 1;
+    fig.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+      fig.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); dibujar(b.dataset.esc); })); }
+  dibujar(fig.querySelector('button[aria-pressed="true"]').dataset.esc);
+  tabla(fig, ["Pieza", "Persona nueva", "Con historial"], DATOS.ablacion.nueva.map(([p, d], i) => [p, fmt(d, 2), fmt(DATOS.ablacion.historial[i][1], 2)]));
+});
+
+// 4 · aporte del perfil por grupo
+RENDER.push(() => {
+  const fig = document.getElementById("f-aporte");
+  barrasH(fig, DATOS.aporte.map(([g, v]) => ({ label: g, value: v, color: g === "oscuro" ? css("--red") : css("--contexto"),
+    valueLabel: "+" + fmt(v), tip: `<b>${g}</b>: +${fmt(v, 2)} puntos` })), { max: 4.5, margenIzq: 80 });
+  tabla(fig, ["Grupo", "Aporte del perfil (puntos)"], DATOS.aporte.map(([g, v]) => [g, fmt(v, 2)]));
+});
+
+// 5 · concentración de reseñas por tono
+RENDER.push(() => {
+  const fig = document.getElementById("f-conc"); const raros = ["porcelain", "olive", "dark"];
+  barrasH(fig, DATOS.conc.map(([t, v]) => ({ label: t, value: v, color: raros.includes(t) ? css("--red") : css("--contexto"),
+    valueLabel: v + "%", tip: `<b>${t}</b>: ${v}% en sus 10 productos más reseñados` })), { max: 70, altoFila: 24, margenIzq: 96 });
+  tabla(fig, ["Tono", "% en sus 10 productos más reseñados"], DATOS.conc.map(([t, v]) => [t, v + "%"]));
+});
+
+// 6 · acierto contra variedad (línea)
+RENDER.push(() => {
+  const fig = document.getElementById("f-var"); const cont = fig.querySelector(".chart"); const t = tip(fig);
+  cont.innerHTML = "";
+  const W = Math.max(300, cont.clientWidth || 680), H = 300, x0 = 46, x1 = W - 30, y0 = 18, y1 = H - 40;
+  const sx = v => x0 + (v - 50) / (300 - 50) * (x1 - x0), sy = v => y1 - v / 12 * (y1 - y0);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" }, cont);
+  [0, 3, 6, 9, 12].forEach(v => { el("line", { x1: x0, x2: x1, y1: sy(v), y2: sy(v), class: v ? "eje" : "cero" }, svg);
+    const tx = el("text", { x: x0 - 8, y: sy(v) + 4, "text-anchor": "end" }, svg); tx.textContent = v + "%"; });
+  [50, 100, 150, 200, 250, 300].forEach(v => { const tx = el("text", { x: sx(v), y: H - 18, "text-anchor": "middle" }, svg); tx.textContent = v; });
+  const xl = el("text", { x: (x0 + x1) / 2, y: H - 2, "text-anchor": "middle" }, svg); xl.textContent = "productos distintos recomendados";
+  el("line", { x1: x0, x2: x1, y1: sy(8.91), y2: sy(8.91), stroke: css("--base"), "stroke-dasharray": "5 4", "stroke-width": 1.5 }, svg);
+  const lb = el("text", { x: x0 + 6, y: sy(8.91) + 16, "text-anchor": "start" }, svg); lb.textContent = "mejor modelo simple (8,9%)";
+  el("polyline", { points: DATOS.variedad.map(([, n, r]) => `${sx(n)},${sy(r)}`).join(" "), fill: "none", stroke: css("--red"), "stroke-width": 2 }, svg);
+  const OFF = [[-10, -10, "end"], [10, -10, "start"], [10, -10, "start"], [10, 18, "start"], [-10, 4, "end"]];  // etiquetas sin choques
+  DATOS.variedad.forEach(([b, n, r], i) => {
+    const c = el("circle", { cx: sx(n), cy: sy(r), r: 5, fill: css("--red"), stroke: "#fff", "stroke-width": 2, class: "mark" }, svg);
+    const lab = el("text", { x: sx(n) + OFF[i][0], y: sy(r) + OFF[i][1], "text-anchor": OFF[i][2] }, svg); lab.textContent = `β = ${fmt(b, 2).replace(",00", "")}`;
+    const hit = el("circle", { cx: sx(n), cy: sy(r), r: 18, class: "hit" }, svg);
+    hit.addEventListener("mousemove", ev => { t.show(ev, `<b>β = ${fmt(b, 2)}</b> · ${n} productos · recall ${fmt(r)}%`); c.setAttribute("r", 7); });
+    hit.addEventListener("mouseleave", () => { t.hide(); c.setAttribute("r", 5); });
+  });
+  tabla(fig, ["β", "Productos distintos", "Recall@10 (%)"], DATOS.variedad.map(([b, n, r]) => [fmt(b, 2), n, fmt(r)]));
+});
+RENDER.forEach(f => f());
+let _rz; addEventListener("resize", () => { clearTimeout(_rz); _rz = setTimeout(() => RENDER.forEach(f => f()), 150); });
+</script>
+</body>
+</html>

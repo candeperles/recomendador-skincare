@@ -1,0 +1,45 @@
+{
+ "skin_tone": [
+  "dark",
+  "deep",
+  "desconocido",
+  "ebony",
+  "fair",
+  "fairLight",
+  "light",
+  "lightMedium",
+  "medium",
+  "mediumTan",
+  "notSureST",
+  "olive",
+  "porcelain",
+  "rich",
+  "tan"
+ ],
+ "skin_type": [
+  "combination",
+  "desconocido",
+  "dry",
+  "normal",
+  "oily"
+ ],
+ "eye_color": [
+  "Grey",
+  "blue",
+  "brown",
+  "desconocido",
+  "gray",
+  "green",
+  "hazel"
+ ],
+ "hair_color": [
+  "auburn",
+  "black",
+  "blonde",
+  "brown",
+  "brunette",
+  "desconocido",
+  "gray",
+  "red"
+ ]
+}
