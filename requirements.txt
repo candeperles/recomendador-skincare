@@ -3,7 +3,6 @@ numpy
 pyarrow
 scikit-learn
 matplotlib
-plotly
 jupyter
 ipykernel
 scipy

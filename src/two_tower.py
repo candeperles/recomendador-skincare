@@ -315,11 +315,20 @@ class TwoTowerRecommender:
         return (self.user_vectors(user_ids, V) @ V.T).numpy()
 
     @torch.no_grad()
-    def score_profiles(self, profiles: pd.DataFrame):
-        """Puntajes para personas inventadas, solo con perfil (sin historial): cold start puro."""
+    def score_profiles(self, profiles: pd.DataFrame, histories=None):
+        """Puntajes para personas inventadas.
+
+        profiles: DataFrame con las columnas de perfil (una fila por persona).
+        histories: opcional, una lista (una por persona) de posiciones de productos que le gustaron.
+                   Sin historial es cold start puro. La red no se re-entrena: el historial es una entrada.
+        """
         self.model.eval()
         V = self.item_vectors()
         prof = torch.as_tensor(self.ud.encode_profiles(profiles))
         B = len(profiles)
-        u = self.model.user_vectors(prof, torch.zeros(B, V.shape[1]), torch.zeros(B, dtype=torch.long))
+        histories = histories if histories is not None else [[] for _ in range(B)]
+        lens = np.array([len(h) for h in histories])
+        flat = np.concatenate([np.asarray(h, dtype=np.int64) for h in histories]) if lens.sum() else np.array([], dtype=np.int64)
+        hist_sum = _history_sum(V, flat, lens)
+        u = self.model.user_vectors(prof, hist_sum, torch.as_tensor(lens))
         return (u @ V.T).numpy()
