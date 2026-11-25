@@ -8,6 +8,8 @@ comparada contra baselines clásicos bien ajustados y con un análisis de *fairn
 
 📖 **La historia, con gráficos interactivos:** [¿Tu piel alcanza?](https://candeperles.github.io/recomendador-skincare/) (`docs/index.html`)
 
+🧴 **Probá la demo:** [tu top 10 de skincare](https://recomendador-skincare-cqmezmxdhuk5jyetynpfza.streamlit.app/)
+
 ## Resultados en 30 segundos
 
 Evaluación final en **test** (datos que ninguna decisión vio), recall@10:
@@ -32,6 +34,8 @@ Evaluación final en **test** (datos que ninguna decisión vio), recall@10:
 ## La demo
 
 Elegís tu tono, tipo de piel, ojos y pelo (y, si querés, productos que ya te gustaron) y la red te devuelve tu top 10, con un control de "variedad".
+
+**Online:** https://recomendador-skincare-cqmezmxdhuk5jyetynpfza.streamlit.app/ · **Local:**
 
 ```
 .venv\Scripts\streamlit run web/app.py
@@ -123,4 +127,3 @@ docs/               otras ideas (ej. idea_dupes_labiales.md)
 ### Ideas para seguir
 - Darle más peso a lo reciente en el historial (atención o descuento por antigüedad): la mejora más prometedora con historial
 - Marcar o filtrar las reseñas con origen sesgado antes de entrenar
-- Publicar la demo (Streamlit Community Cloud) y escribir una nota estilo *The Pudding* con la historia
