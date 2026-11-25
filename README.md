@@ -72,11 +72,18 @@ docs/               notas y otras ideas (ej. idea_dupes_labiales.md)
   - Sin brecha en contra de los tonos oscuros: el grupo *oscuro* es el que más mejora
   - Punto débil: en cold start recomienda pocos productos distintos (67), casi todos populares
 
-### Paso 4 · Experimentos (semana 3)
-- [ ] Ablaciones: sin perfil, sin ingredientes/highlights, sin historial, sin ID
-- [ ] Fairness: recall por tono de piel; ¿por qué *dark* recibe una lista tan distinta y *tan* no mejora?
-- [ ] Sesgo de popularidad: penalizar lo popular en cold start, ¿cuánto recall cuesta?
-- [ ] Evaluación final en test (una sola vez)
+### Paso 4 · Experimentos (semana 3) ✅
+- [x] Ablaciones (`scripts/train_ablations.py`): el perfil solo sirve en cold start; el historial es la pieza clave;
+  el contenido explica la ventaja sobre el ALS; el ID casi no hace falta (sirve para productos nuevos)
+- [x] Estabilidad: 3 semillas, el recall varía 0,03 puntos
+- [x] Fairness: en cold start el perfil le suma más que a nadie al grupo *oscuro* (+3,7 puntos); sin brecha en contra
+  de ningún grupo. **Hallazgo:** las personas *dark*, *porcelain* y *olive* reseñan casi solo productos de
+  Caudalie y KORRES (sesgo de origen de los datos): la red "acierta" pero no personaliza
+- [x] Popularidad: con β = 0,25–0,5 la red recomienda 40–100% más productos distintos perdiendo poco recall
+- [x] **Test (una sola vez)**, re-entrenando todo con lo que no es test (`scripts/train_final.py`):
+  - Cold start: **two-tower 10,2%** contra híbrido 8,9% (+1,3 ± 0,3) → la red gana
+  - Con historial: **two-tower 15,2%** contra ALS 15,0% (+0,2 ± 0,3) → empate
+  - Detalle y un error de protocolo corregido en `notebooks/04_experimentos.ipynb`
 - [ ] Demo: elegís tu piel y te devuelve el top 10
 
 ### Paso 5 · Contarlo (semana 3)

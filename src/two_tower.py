@@ -219,11 +219,17 @@ def _history_sum(item_vecs, hist_items, lens):
 
 
 class TwoTowerRecommender:
-    """Entrena la red y expone `score(user_ids)` como los baselines."""
+    """Entrena la red y expone `score(user_ids)` como los baselines.
+
+    Con `weights=<ruta .pt>` no entrena: arma la red y carga pesos ya entrenados
+    (hay que pasar los mismos `model_kw` con los que se entrenó).
+    """
 
     def __init__(self, train, users, items, idx: ItemIndex, epochs=8, batch_size=1024, lr=2e-3,
                  weight_decay=1e-5, history_dropout=0.3, seed=42, threads=8, verbose=True,
-                 eval_fn=None, **model_kw):
+                 eval_fn=None, weights=None, **model_kw):
+        if weights is not None:
+            epochs = 0
         torch.manual_seed(seed)
         torch.set_num_threads(threads)
         self.rng = np.random.default_rng(seed)
@@ -233,13 +239,18 @@ class TwoTowerRecommender:
         self.model = TwoTower(len(idx), self.fi.sizes, self.ud.sizes, **model_kw)
         self.history_dropout = history_dropout
 
+        self.log = []
+        if weights is not None:
+            self.model.load_state_dict(torch.load(weights))
+            self.log = pd.DataFrame(self.log)
+            return
+
         rows = self.ud.rows(train.author_id)
         targets = idx.to_pos(train.product_id)
         opt = torch.optim.AdamW(self.model.parameters(), lr=lr, weight_decay=weight_decay)
         steps = epochs * int(np.ceil(len(rows) / batch_size))
         sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=lr, total_steps=steps, pct_start=0.1)
 
-        self.log = []
         best, self.best_state = -np.inf, None
         for ep in range(1, epochs + 1):
             t0 = time.time()

@@ -127,3 +127,21 @@ class ProfileToALS:
     def score(self, user_ids):
         X = self.enc.transform(self.users.loc[np.asarray(user_ids), self.cols].astype(str))
         return self.reg.predict(X) @ self.als.V.T
+
+
+class PopularityPenalty:
+    """Re-ranking: le resta a los puntajes de cualquier modelo una penalización por popularidad.
+
+        puntaje_nuevo = scale * puntaje_modelo - beta * log(1 + positivos_en_train)
+
+    beta = 0 deja el modelo igual; beta más grande empuja hacia productos menos conocidos.
+    `scale` lleva el puntaje del modelo a una escala comparable (para la two-tower, 1/temperatura,
+    que es la escala con la que se entrenó la softmax). No re-entrena nada.
+    """
+
+    def __init__(self, model, train, idx: ItemIndex, beta=0.5, scale=1.0):
+        self.model, self.beta, self.scale = model, beta, scale
+        self.logpop = np.log1p(np.bincount(idx.to_pos(train.product_id), minlength=len(idx))).astype(np.float32)
+
+    def score(self, user_ids):
+        return self.scale * self.model.score(user_ids) - self.beta * self.logpop
